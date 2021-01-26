@@ -147,8 +147,8 @@ let get_html self query logdir =
 
 let get_latest_logdir self =
   self.logdirs >>= function
-  | [] -> Lwt.fail Not_found
-  | logdir::_ -> Lwt.return logdir
+  | [] -> print_endline "No log dirs found"; Lwt.fail Not_found
+  | logdir::_ -> Logs.info (fun f -> f "Log dir found"); Lwt.return logdir
 
 let get_html self query logdir =
   match Html_cache.find_opt self.html_tbl (logdir, query) with

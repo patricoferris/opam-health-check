@@ -2,6 +2,16 @@ open Lwt.Infix
 
 type t = Server_workdirs.t
 
+type build = Check.build
+
+let build_of_string s = match String.lowercase_ascii s with 
+  | "macos" -> Check.Macos 
+  | _ -> Check.Linux
+
+let build_to_string = function 
+  | Check.Macos -> "macos"
+  | Check.Linux -> "linux"
+
 let cache = Oca_server.Cache.create ()
 
 let is_directory dir file =
@@ -135,7 +145,7 @@ let run_action_loop ~conf ~run_trigger f =
   in
   loop ()
 
-let start conf workdir =
+let start build conf workdir =
   let port = Server_configfile.admin_port conf in
   let on_finished = cache_clear_and_init conf in
   let run_trigger = Lwt_mvar.create_empty () in
@@ -146,7 +156,7 @@ let start conf workdir =
   let task () =
     Lwt.join [
       tcp_server port callback;
-      run_action_loop ~conf ~run_trigger (fun () -> Check.run ~on_finished ~conf cache workdir);
+      run_action_loop ~conf ~run_trigger (fun () -> Check.run ~on_finished ~conf build cache workdir);
     ]
   in
   (workdir, task)

@@ -82,7 +82,9 @@ module Make (Backend : Backend_intf.S) = struct
     in
     match path_from_uri uri with
     | [] ->
+        print_endline "Looking up cacge directory";
         Cache.get_latest_logdir Backend.cache >>= fun logdir ->
+        print_endline "Got past logdir";
         parse_raw_query logdir uri >>= fun query ->
         Cache.get_html Backend.cache query logdir >>= fun html ->
         serv_text ~content_type:"text/html" html
@@ -118,12 +120,13 @@ module Make (Backend : Backend_intf.S) = struct
       ~mode:(`TCP (`Port port))
       (Cohttp_lwt_unix.Server.make ~callback ())
 
-  let main ~debug ~workdir =
+  let main ~debug ~workdir ~build =
+    print_endline (string_of_bool debug);
     let workdir = Server_workdirs.create ~workdir in
     Server_workdirs.init_base workdir >>= fun () ->
     let conf = Server_configfile.from_workdir workdir in
     let port = Server_configfile.port conf in
-    Backend.start conf workdir >>= fun (backend, backend_task) ->
+    Backend.start build conf workdir >>= fun (backend, backend_task) ->
     Lwt.join [
       tcp_server ~debug port (callback workdir backend);
       backend_task ();

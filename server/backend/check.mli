@@ -1,6 +1,9 @@
+type build = Linux | Macos
+
 val run :
   on_finished:(Server_workdirs.t -> unit) ->
   conf:Server_configfile.t ->
+  build ->
   Oca_server.Cache.t ->
   Server_workdirs.t ->
   unit Lwt.t

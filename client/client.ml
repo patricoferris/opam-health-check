@@ -28,8 +28,8 @@ let process_response (res, body) =
   | `Upgrade_required ->
       print_body body >|= fun () ->
       raise Exit
-  | _ ->
-      print_endline "A problem occured";
+  | s ->
+      print_endline ("A problem occured: " ^ Cohttp.Code.string_of_status s);
       raise Exit
 
 let send_msg ~profilename ~confdir ~conffile msg =
