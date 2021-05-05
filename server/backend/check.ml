@@ -207,13 +207,12 @@ let get_obuilder_macos ~conf ~opam_commit ~opam_repo_commit ~extra_repos switch 
   stage ~from begin
     [ 
       (* macOS can't cope with scripts... yet... *)
-      run ~network "opam init -ya --compiler=ocaml-system && \
-        mkdir -p ./tmp && \
+      run ~network "opam --version && opam init -ya --compiler=ocaml-system && \
         git clone git://github.com/kit-ty-kate/opam.git ./tmp/opam && \
         git -C ./tmp/opam checkout %s && \
-        opam pin add -yn ocamlfind git://github.com/kit-ty-kate/ocamlfind.git#no-m4 && \
+        opam pin add -yn ocamlfind git+https://github.com/ocaml/ocamlfind && \
         opam pin add -yn ./tmp/opam && \
-        opam install -y opam-devel opam-0install-cudf && \
+        opam install -vy opam-devel opam-0install-cudf && \
         mv \"$(opam var opam-devel:lib)/opam\" ./local/bin/opam && \
         rm -rf ./tmp/opam ./tmp/depext.txt ~/.opam && \
         git clone git://github.com/ocaml/opam-repository.git ~/opam-repository && \
@@ -228,6 +227,7 @@ let get_obuilder_macos ~conf ~opam_commit ~opam_repo_commit ~extra_repos switch 
       env "OPAMEXTERNALSOLVER" "builtin-0install";
       env "OPAMDEPEXTYES" "1";
       env "OPAMDROPINSTALLEDPACKAGES" "1";
+      env "HOMEBREW_VERBOSE" "1";
       run "opam init -ya --compiler=ocaml-system ~/opam-repository";
     ] @
     List.flatten (
@@ -346,12 +346,14 @@ let get_pkgs ~cap ~conf ~stderr (switch, base_obuilder) =
   let switch = Intf.Compiler.to_string (Intf.Switch.name switch) in
   Lwt_io.write_line stderr ("Getting packages list for "^switch^"...") >>= fun () ->
   ocluster_build_str ~cap ~conf ~base_obuilder ~stderr ~default:None (Server_configfile.list_command conf) >>= fun pkgs ->
+  (* Lwt.return [ "0install.2.17"; "acgtk.1.5.2"; "aez.0.3"; "bimage-io.0.3.1" ] >>= fun pkgs -> *)
   let pkgs = List.filter begin fun pkg ->
     Oca_lib.is_valid_filename pkg &&
     match Intf.Pkg.name (Intf.Pkg.create ~full_name:pkg ~instances:[] ~opam:OpamFile.OPAM.empty ~revdeps:0) with (* TODO: Remove this horror *)
     | "ocaml" | "ocaml-base-compiler" | "ocaml-variants" | "ocaml-beta" | "ocaml-config" -> false
     | _ -> true
   end pkgs in
+  let pkgs = List.filteri (fun i _ -> i > 400) pkgs in 
   let nelts = string_of_int (List.length pkgs) in
   Lwt_io.write_line stderr ("Package list for "^switch^" retrieved. "^nelts^" elements to process.") >|= fun () ->
   pkgs
